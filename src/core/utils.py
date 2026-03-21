@@ -4,7 +4,7 @@ import logging
 import zipfile
 from pathlib import Path
 
-from src.core.config import settings
+from src.config import settings
 
 # TOFIX: Agregar visualize_detections() migrado desde plot_detections()
 # en detector.py cuando se haga el refactor de visualización.
