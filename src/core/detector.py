@@ -13,7 +13,7 @@ from PIL import Image
 from ultralytics import YOLO
 import supervision as sv
 
-from src.core.config import settings
+from src.config import settings
 
 # TOFIX: Migrar a estructura de clase HousePolesDetector cuando se haga
 # el refactor de arquitectura. Ver audit en el chat.
