@@ -79,8 +79,6 @@ Prerequisitos
 
 ## Complemento: integración con el enunciado del taller
 
-He integrado la información del enunciado del taller proporcionado como guía. A continuación se listan los puntos prácticos sugeridos por el enunciado y cómo aplicarlos a este repositorio. Compruebe y adapte según las instrucciones oficiales del curso si hay discrepancias.
-
 - Dataset y anotaciones
 	- El dataset usado fue exportado desde Roboflow y contiene 109 imágenes anotadas en formato YOLOv8 (ver `images/` y `images/data.yaml`).
 	- Clases: `fachada`, `poste`.
@@ -98,19 +96,6 @@ He integrado la información del enunciado del taller proporcionado como guía. 
 	4. Ejecutar inferencias de validación con `uvicorn` + llamadas a `/predict` o usando `src/core/detector.infer()` o `pipeline.run()` sobre imágenes de validación.
 	5. Evaluar y añadir resultados al informe (notebook o PDF).
 
-- Entregables recomendados para el taller
-	- Código fuente (este repositorio con README actualizado).
-	- Pesos resultantes (`runs/train/<exp>/weights/best.pt` y copia en `models/detector.pt` si procede).
-	- Notebook o script de evaluación que reproduzca métricas y visualizaciones.
-	- Informe técnico (PDF) con metodología, arquitectura, métricas y conclusiones.
-
-- Criterios de revisión sugeridos (alineados con el enunciado)
-	- Funcionamiento reproducible: pasos claros para instalar y ejecutar los experimentos.
-	- Calidad de la detección: mAP y ejemplos visuales representativos.
-	- Calidad del inpainting: ejemplos antes/después y discusión de artefactos.
-	- Claridad del código y documentación: funciones/archivos comentados y `README.md` completo.
-
-Si lo desea, puedo añadir un `notebook/` de ejemplo que reproduzca un experimento mínimo (entrenamiento rápido + inferencia sobre 5 imágenes) y/o preparar una plantilla de informe en LaTeX o Markdown siguiendo el enunciado del taller.
 
 ```bash
 # crear y activar virtualenv
