@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 2
+names: ['fachada', 'poste']
+
+roboflow:
+  workspace: aplicaciones-de-aprendizaje-atuomatico-de-maquina
+  project: aplicaciones-de-aprendizaje-atuomatico-de-maquina
+  version: dataset
+  license: Private
+  url: https://app.roboflow.com/aplicaciones-de-aprendizaje-atuomatico-de-maquina/aplicaciones-de-aprendizaje-atuomatico-de-maquina/dataset
