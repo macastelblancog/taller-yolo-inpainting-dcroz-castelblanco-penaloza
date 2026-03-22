@@ -13,10 +13,5 @@ python-multipart
 uvicorn
 
 # Configuration
-<<<<<<< Updated upstream
 pydantic
 pydantic-settings
-=======
-pydantic==2.12.5
-pydantic-settings==2.13.
->>>>>>> Stashed changes
