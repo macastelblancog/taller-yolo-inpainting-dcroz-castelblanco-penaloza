@@ -9,8 +9,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # ── Sub-models ────────────────────────────────────────────────────────────────
 
@@ -28,11 +27,12 @@ class PathSettings(BaseModel):
     detector_model: Path = REPO_ROOT / "models/detector.pt"
     base_model:     Path = REPO_ROOT / "models/yolov8n.pt"
     lama_model:     Path = REPO_ROOT / "models/lama/big-lama"
-    data_yaml:      Path = REPO_ROOT / "images/config/data.yaml"
+    data_yaml:      Path = REPO_ROOT / "images/data.yaml"      # no config/ subfolder
     images_dir:     Path = REPO_ROOT / "images"
     results_dir:    Path = REPO_ROOT / "results"
     runs_dir:       Path = REPO_ROOT / "runs/train"
-
+    models_dir:     Path = REPO_ROOT / "models"
+    data_zip:       Path = REPO_ROOT / "images/data.zip"
 
 class InferenceSettings(BaseModel):
     """Parameters used at inference time.
@@ -43,11 +43,10 @@ class InferenceSettings(BaseModel):
     # device:         str   = "cpu"    # "cpu" | "cuda" | "mps"
 
     def to_predict_args(self) -> dict:
-        """Returns kwargs ready to unpack into model.predict()."""
         return {
             "conf":   self.conf_threshold,
             "iou":    self.iou_threshold,
-            "device": self.device,
+            "device": self.device,       # ← AttributeError: field does not exist
             "imgsz":  self.image_size,
         }
 
