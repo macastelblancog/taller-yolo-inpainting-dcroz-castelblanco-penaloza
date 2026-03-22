@@ -6,7 +6,7 @@ from pathlib import Path
 import albumentations as A
 from ultralytics import YOLO
 
-from src.core.config import settings
+from src.config import settings
 from src import utils
 
 # TOFIX: Implementar integración correcta de albumentations mediante
@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 # TOFIX: Mover a src/training/augmentation.py si el pipeline de
 # augmentación crece con más transformaciones.
 AUGMENTATION_TRANSFORMS = [
-    A.Blur(blur_limit=7, p=0.5),
-    A.CLAHE(clip_limit=4.0, p=0.5),
+    A.Blur(blur_limit = 7, p = 0.5),
+    A.CLAHE(clip_limit = 4.0, p = 0.5),
 ]
 
 
