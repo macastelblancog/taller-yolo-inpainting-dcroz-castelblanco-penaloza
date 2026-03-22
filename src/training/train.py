@@ -8,6 +8,7 @@ from ultralytics import YOLO
 
 from src.config import settings
 from src.core import utils
+from src.core import utils
 
 # TOFIX: Implementar integración correcta de albumentations mediante
 # callback o dataset wrapper de Ultralytics — el parámetro augmentations=
@@ -76,6 +77,7 @@ def train_model(data_yaml: Path = None) -> object:
     """
     logger.info("Preparando entorno de entrenamiento...")
     # utils.unzip_dataset()
+    #utils.unzip_dataset()
     utils.ensure_dirs()
     logger.info("Entorno listo. Iniciando entrenamiento.")
     results = train(data_yaml)
