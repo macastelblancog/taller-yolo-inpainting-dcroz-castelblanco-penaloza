@@ -1,4 +1,3 @@
 # src/core/__init__.py
-from src.core.detector import HousePolesDetector
-from src.core.pipeline import Pipeline
-from src.core.schemas import DetectionResult, PipelineResult
+# TOFIX: Agregar re-exports públicos cuando detector.py y pipeline.py
+# sean refactorizados a clases y la API del módulo esté estabilizada.

@@ -1,0 +1,17 @@
+﻿# Core ML
+ultralytics==8.4.24
+
+# Computer vision utilities
+supervision==0.27.0.post2
+albumentations==2.0.8
+Pillow==12.1.1
+numpy==2.4.3
+
+# API
+fastapi==0.135.1
+python-multipart==0.0.22
+uvicorn==0.24.0
+
+# Configuration
+pydantic==2.12.5
+pydantic-settings==2.13.1
