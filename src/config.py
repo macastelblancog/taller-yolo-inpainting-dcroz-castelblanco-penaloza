@@ -27,12 +27,15 @@ class PathSettings(BaseModel):
     detector_model: Path = REPO_ROOT / "models/detector.pt"
     base_model:     Path = REPO_ROOT / "models/yolov8n.pt"
     lama_model:     Path = REPO_ROOT / "models/lama/big-lama"
-    data_yaml:      Path = REPO_ROOT / "images/data.yaml"      # no config/ subfolder
+    data_yaml:      Path = REPO_ROOT / "images/data.yaml"
     images_dir:     Path = REPO_ROOT / "images"
     results_dir:    Path = REPO_ROOT / "results"
     runs_dir:       Path = REPO_ROOT / "runs/train"
     models_dir:     Path = REPO_ROOT / "models"
     data_zip:       Path = REPO_ROOT / "images/data.zip"
+    masks_dir:      Path = REPO_ROOT / "results/masks"
+    inpainted_dir:  Path = REPO_ROOT / "results/inpainted" 
+    
 
 class InferenceSettings(BaseModel):
     """Parameters used at inference time.
@@ -46,16 +49,16 @@ class InferenceSettings(BaseModel):
         return {
             "conf":   self.conf_threshold,
             "iou":    self.iou_threshold,
-            "device": self.device,       # ← AttributeError: field does not exist
+            #"device": self.device,       # ← AttributeError: field does not exist
             "imgsz":  self.image_size,
         }
 
 
 class MaskSettings(BaseModel):
     """Controls how pole bounding boxes are converted to inpainting masks."""
-    dilation_px: int = 12    # pixels added around each pole bbox
-    fill_value:  int = 255   # white mask on black canvas
-
+    dilation_px:    int   = 12
+    fill_value:     int   = 255
+    conf_threshold: float = 0.35    # umbral mínimo de confianza para enmascarar
 
 class InpaintingSettings(BaseModel):
     """Inpainting backend selection and its parameters."""

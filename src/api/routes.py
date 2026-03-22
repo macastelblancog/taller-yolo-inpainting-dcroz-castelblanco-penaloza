@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from src.core import pipeline
+from src.core.pipeline import run_detection, run_inpainting
 
 # TOFIX: Importar settings cuando /health esté implementado.
 # TOFIX: Mover serialize_results a schemas.py cuando se implemente.
@@ -25,6 +25,8 @@ FORMATOS_PERMITIDOS = {
     "image/webp": ".webp",
 }
 
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def validar_archivo(archivo: UploadFile) -> str:
     if archivo.content_type not in FORMATOS_PERMITIDOS:
@@ -59,25 +61,44 @@ def serialize_results(results) -> list[dict]:
     return detections_out
 
 
+def stream_image(image_path: Path, filename: str) -> StreamingResponse:
+    """
+    Helper compartido — lee una imagen de disco y la retorna como
+    StreamingResponse. Evita duplicar este bloque en cada endpoint.
+    """
+    image_bytes = image_path.read_bytes()
+    return StreamingResponse(
+        BytesIO(image_bytes),
+        media_type="image/jpeg",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        },
+    )
+
+
+# ── Root ──────────────────────────────────────────────────────────────────────
+
 # Endpoint raíz — renombrado de raiz() a root() para consistencia con inglés.
-# La respuesta mantiene los textos originales en español.
 @router.get("/")
 def root():
     return {
-        "api": "House Detection API",
+        "api": "Facade & Pole Detection API",
         "endpoints": {
-            "POST /predict":       "Return JSON detections",
-            "POST /predict/image": "Return annotated image",
+            "POST /detect":           "JSON con bounding boxes de fachadas y postes",
+            "POST /detect/visualize": "Imagen anotada con bounding boxes",
+            "POST /inpaint":          "JSON con resultado tras eliminar postes",
+            "POST /inpaint/visualize":"Imagen con postes eliminados",
         },
     }
 
 
-# TOFIX: Renombrar /predict a /process cuando masker e inpainter
-# estén integrados en el pipeline completo.
-@router.post("/predict")
-async def predict(archivo: UploadFile = File(...)):
+# ── Detection endpoints ───────────────────────────────────────────────────────
+
+@router.post("/detect")
+async def detect(archivo: UploadFile = File(...)):
+    """Retorna detecciones de fachadas y postes en JSON."""
     extension = validar_archivo(archivo)
-    logger.info(f"POST /predict — archivo: {archivo.filename}")
+    logger.info(f"POST /detect — archivo: {archivo.filename}")
 
     try:
         contents = await archivo.read()
@@ -87,37 +108,41 @@ async def predict(archivo: UploadFile = File(...)):
             input_path = tmp_dir / f"input{extension}"
             input_path.write_bytes(contents)
 
-            # TOFIX: Cuando pipeline.run() retorne dataclass, reemplazar
-            # llamada directa al detector por result.detection.
-            from src.core.detector import detect, load_image, load_model
-            image            = load_image(input_path)
-            model            = load_model()
-            results, _       = detect(image, model)
-            detections       = serialize_results(results)
+            detection_result = run_detection(image_path=input_path)
+            if detection_result is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No se pudo procesar la imagen."
+                )
 
-            logger.info(f"Detecciones: {len(detections)} — {archivo.filename}")
+            annotated, results, inference_ms = detection_result
+            detections = serialize_results(results)
+
+            logger.info(
+                f"Detecciones: {len(detections)} — {archivo.filename} "
+                f"({inference_ms:.1f}ms)"
+            )
 
             return JSONResponse(content={
                 "filename":         archivo.filename,
                 "content_type":     archivo.content_type,
                 "total_detections": len(detections),
+                "inference_ms":     round(inference_ms, 2),
                 "detections":       detections,
             })
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error en /predict: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error de inferencia: {e}"
-        ) from e
+        logger.error(f"Error en /detect: {e}")
+        raise HTTPException(status_code=500, detail=f"Error: {e}") from e
 
 
-@router.post("/predict/image")
-async def predict_image(archivo: UploadFile = File(...)):
+@router.post("/detect/visualize")
+async def detect_visualize(archivo: UploadFile = File(...)):
+    """Retorna imagen anotada con bounding boxes de fachadas y postes."""
     extension = validar_archivo(archivo)
-    logger.info(f"POST /predict/image — archivo: {archivo.filename}")
+    logger.info(f"POST /detect/visualize — archivo: {archivo.filename}")
 
     try:
         contents = await archivo.read()
@@ -125,44 +150,118 @@ async def predict_image(archivo: UploadFile = File(...)):
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_dir     = Path(tmp_dir)
             input_path  = tmp_dir / f"input{extension}"
-            output_path = tmp_dir / f"pred_{Path(archivo.filename).name}"
+            output_path = tmp_dir / f"det_{Path(archivo.filename).name}"
 
             input_path.write_bytes(contents)
 
-            annotated = pipeline.run(
+            detection_result = run_detection(
                 image_path=input_path,
                 out_path=output_path,
             )
 
-            if annotated is None:
+            if detection_result is None:
                 raise HTTPException(
                     status_code=500,
                     detail="La inferencia retornó None."
                 )
 
+            annotated, results, inference_ms = detection_result
+
             if not output_path.exists():
-                raise HTTPException(
-                    status_code=500,
-                    detail="La imagen anotada no fue creada."
-                )
+                annotated.save(str(output_path))
 
-            image_bytes = output_path.read_bytes()
-            logger.info(f"Imagen anotada lista: {output_path.name}")
-
-            return StreamingResponse(
-                BytesIO(image_bytes),
-                media_type="image/jpeg",
-                headers={
-                    "Content-Disposition":
-                        f'attachment; filename="{output_path.name}"'
-                },
-            )
+            return stream_image(output_path, output_path.name)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error en /predict/image: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error de inferencia: {e}"
-        ) from e
+        logger.error(f"Error en /detect/visualize: {e}")
+        raise HTTPException(status_code=500, detail=f"Error: {e}") from e
+
+
+# ── Inpainting endpoints ──────────────────────────────────────────────────────
+
+@router.post("/inpaint/visualize")
+async def inpaint_visualize(archivo: UploadFile = File(...)):
+    """
+    Retorna imagen con postes eliminados usando LaMa inpainting.
+    """
+    extension = validar_archivo(archivo)
+    logger.info(f"POST /inpaint/visualize — archivo: {archivo.filename}")
+
+    try:
+        contents = await archivo.read()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_dir    = Path(tmp_dir)
+            input_path = tmp_dir / f"input{extension}"
+            output_path = tmp_dir / f"inp_{Path(archivo.filename).name}"
+
+            input_path.write_bytes(contents)
+
+            result = run_inpainting(image_path=input_path)
+
+            if result is None:
+                raise HTTPException(
+                    status_code=500,
+                    detail="El pipeline retornó None."
+                )
+
+            inpainted, mask_path = result
+
+            # Guardar la imagen inpainted en el directorio temporal
+            # para poder streamearla de vuelta al cliente.
+            # save_inpainted() ya la guardó en results/inpainted/
+            # pero necesitamos una copia en tmp para StreamingResponse.
+            inpainted.save(str(output_path), format="JPEG")
+
+            return stream_image(output_path, output_path.name)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en /inpaint/visualize: {e}")
+        raise HTTPException(status_code=500, detail=f"Error: {e}") from e
+
+
+@router.post("/inpaint")
+async def inpaint(archivo: UploadFile = File(...)):
+    """
+    Retorna JSON con resultado tras detectar y eliminar postes.
+
+    # TOFIX: Cuando inpainter esté implementado, agregar campos:
+    #        poles_removed, mask_path, inpainting_ms al response.
+    """
+    extension = validar_archivo(archivo)
+    logger.info(f"POST /inpaint — archivo: {archivo.filename}")
+
+    try:
+        contents = await archivo.read()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_dir    = Path(tmp_dir)
+            input_path = tmp_dir / f"input{extension}"
+            input_path.write_bytes(contents)
+
+            result = run_inpainting(image_path=input_path)
+            if result is None:
+                raise HTTPException(
+                    status_code=500,
+                    detail="El pipeline retornó None."
+                )
+
+            annotated, mask_path = result
+
+            return JSONResponse(content={
+                "filename":    archivo.filename,
+                "mask_path":   str(mask_path),
+                "inpainted":   False,  # TOFIX: True cuando inpainter conectado
+                "status":      "mask_generated",
+            })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en /inpaint: {e}")
+        raise HTTPException(status_code=500, detail=f"Error: {e}") from e
+

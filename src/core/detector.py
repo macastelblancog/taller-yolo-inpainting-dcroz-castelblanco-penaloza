@@ -9,6 +9,8 @@
 import logging
 from pathlib import Path
 
+import time
+
 from PIL import Image
 from ultralytics import YOLO
 import supervision as sv
@@ -29,30 +31,32 @@ def load_model():
 
 
 def load_image(image_path: str | Path) -> Image.Image | None:
-    # TOFIX: Reemplazar retorno None por excepción explícita (FileNotFoundError
-    # o ValueError) para evitar propagación silenciosa del error.
-    # TOFIX: Agregar validación de formato de archivo (jpeg, png, webp).
+    image_path = Path(image_path)
+    if not image_path.exists():
+        raise FileNotFoundError(
+            f"No se encontró la imagen en: {image_path}"
+        )
     try:
         image = Image.open(image_path)
+        image.load()  # ← forces full read into memory, releases file handle
         return image
     except Exception as e:
-        logger.error(f"Error al abrir la imagen: {e}")
-        return None
-
+        raise ValueError(
+            f"No se pudo abrir la imagen '{image_path.name}': {e}"
+        ) from e
 
 def detect(image: Image.Image, model=None):
-    # TOFIX: Renombrar a detect() cuando se elimine la referencia a detect_house()
-    # en los scripts que aún la usen — ya renombrado aquí para Taller 3
-    # dado que ahora detectamos dos clases: fachada y poste.
-    # TOFIX: Agregar medición de tiempo (time.perf_counter()) y retornar
-    # inference_ms junto con results cuando se integre pipeline.py.
     if model is None:
         model = load_model()
+    
+    start = time.perf_counter()
     results = model.predict(
         source=image,
         **settings.inference.to_predict_args()
     )
-    return results
+    inference_ms = (time.perf_counter() - start) * 1000
+    
+    return results, inference_ms  # ← must return both values
 
 
 def filter_by_class(results, class_name: str) -> list:

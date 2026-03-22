@@ -1,98 +1,90 @@
 # src/core/inpainter.py
 
-import numpy as np
 import logging
 from pathlib import Path
 
-from src.config import settings
 from PIL import Image
 from simple_lama_inpainting import SimpleLama
 
-# TOFIX: Importar dependencias de LaMa cuando se implemente run_inpainting().
-# TOFIX: Importar dependencias de Inpaint-Anything como alternativa al backend.
+from src.config import settings
+
+# TOFIX: settings.paths.lama_model no aplica para simple_lama_inpainting —
+# el paquete gestiona sus propios pesos internamente en el venv.
+# Relevante solo si se migra a LaMa completo o Inpaint-Anything.
 
 logger = logging.getLogger(__name__)
 
-# TODO: Funcionalidad de run_inpainting() para eliminar postes usando
-#       el backend configurado en settings.inpainting.backend ("lama" | "inpaint_anything")
-# TODO: Funcionalidad de load_inpainter() para cargar el modelo de inpainting
-#       desde settings.paths.lama_model
-
-logger = logging.getLogger(__name__)
-
-# Instancia global para no recargar el modelo en cada llamada
-_lama_instance: SimpleLama | None = None
+# Instancia global — se carga una vez al importar el módulo.
+# La primera llamada descarga los pesos automáticamente si no existen.
+# TOFIX: Mover a un patrón de carga lazy o lifespan de FastAPI
+# para evitar descarga en import time cuando no se necesita inpainting.
+_lama = None
 
 
-def load_inpainter() -> SimpleLama:
+def _get_lama() -> SimpleLama:
     """
-    Carga el modelo LaMa una sola vez y reutiliza la instancia
-    en llamadas posteriores (patrón singleton).
-
-    El modelo se descarga automáticamente la primera vez desde
-    simple_lama_inpainting si no está en caché local.
+    Retorna la instancia de SimpleLama, creándola si no existe.
+    Patrón lazy — solo descarga pesos cuando se necesita por primera vez.
     """
-    global _lama_instance
-    if _lama_instance is None:
-        logger.info("Cargando modelo LaMa...")
-        _lama_instance = SimpleLama()
-        logger.info("Modelo LaMa listo.")
-    return _lama_instance
+    global _lama
+    if _lama is None:
+        logger.info("Cargando modelo LaMa — primera vez puede tardar...")
+        _lama = SimpleLama()
+        logger.info("Modelo LaMa cargado correctamente.")
+    return _lama
 
 
-def run_inpainting(
-    image: Image.Image,
-    mask: Image.Image,
-    save_path: str | Path = None,
-) -> Image.Image:
+def run_inpainting(image: Image.Image, mask: Image.Image) -> Image.Image:
     """
-    Elimina los postes de la imagen aplicando inpainting con LaMa
-    sobre las zonas indicadas por la máscara.
+    Elimina los postes de la imagen usando LaMa inpainting.
 
-    Parámetros
-    ----------
-    image     : imagen PIL original en RGB
-                (salida de detector.load_image).
-    mask      : imagen PIL de la máscara en modo 'L'
-                (salida de masker.generate_mask).
-                Blanco (255) = zona a reconstruir (poste).
-                Negro  (0)   = zona a conservar intacta.
-    save_path : ruta donde guardar el resultado final.
-                Si None, usa settings.paths.results_dir.
+    Args:
+        image: Imagen PIL original sin anotaciones.
+        mask:  Imagen PIL de la máscara — blanco donde hay poste,
+               negro donde no. Salida de masker.generate_mask().
 
-    Retorna
-    -------
-    result : imagen PIL con los postes eliminados.
+    Returns:
+        Imagen PIL con los postes eliminados.
+
+    # TOFIX: Agregar soporte para Inpaint-Anything como backend alternativo
+    # cuando settings.inpainting.backend == "inpaint_anything".
+    # TOFIX: Agregar medición de tiempo (time.perf_counter()) y retornar
+    # inpainting_ms para el response de la API.
     """
+    lama = _get_lama()
 
-    # ── Asegurar formatos correctos para LaMa ────────────────────────────────
-    if image.mode != "RGB":
-        image = image.convert("RGB")
-    if mask.mode != "L":
-        mask = mask.convert("L")
+    logger.info(
+        f"Ejecutando inpainting — imagen: {image.size}, "
+        f"máscara: {mask.size}, "
+        f"backend: {settings.inpainting.backend}"
+    )
 
-    # ── Verificar que la máscara no esté vacía ────────────────────────────────
-    mask_np = np.array(mask)
-    if np.sum(mask_np == 255) == 0:
-        logger.warning("run_inpainting: la máscara está vacía, "
-                       "se devuelve la imagen original sin cambios.")
-        return image
+    # SimpleLama espera imagen RGB y máscara L (escala de grises)
+    image_rgb = image.convert("RGB")
+    mask_l    = mask.convert("L")
 
-    # ── Aplicar LaMa ─────────────────────────────────────────────────────────
-    logger.info("Aplicando LaMa inpainting...")
-    lama   = load_inpainter()
-    result = lama(image, mask)
+    result = lama(image_rgb, mask_l)
+
     logger.info("Inpainting completado.")
-
-    # ── Guardar resultado ─────────────────────────────────────────────────────
-    if save_path is None:
-        results_dir = settings.paths.results_dir / "inpainting"
-        results_dir.mkdir(parents=True, exist_ok=True)
-        save_path = results_dir / "result.png"
-
-    save_path = Path(save_path)
-    save_path.parent.mkdir(parents=True, exist_ok=True)
-    result.save(str(save_path))
-    logger.info(f"Resultado guardado: {save_path}")
-
     return result
+
+
+def save_inpainted(image: Image.Image, source_path: str | Path) -> Path:
+    """
+    Guarda la imagen inpainted en results/inpainted/.
+
+    Args:
+        image:       Imagen PIL resultado del inpainting.
+        source_path: Ruta de la imagen original — usada para el nombre.
+
+    Returns:
+        Ruta donde se guardó la imagen inpainted.
+    """
+    source_path   = Path(source_path)
+    inpainted_dir = settings.paths.inpainted_dir
+    inpainted_dir.mkdir(parents=True, exist_ok=True)
+
+    out_path = inpainted_dir / f"{source_path.stem}_inpainted.jpg"
+    image.save(str(out_path))
+    logger.info(f"Imagen inpainted guardada: {out_path}")
+    return out_path
