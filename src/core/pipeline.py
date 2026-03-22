@@ -65,7 +65,7 @@ def run(image_path: str | Path, model=None, out_path: str | Path = None):
 
     # ── TODO: Paso 4 — Generación de máscara (masker) ─────────────────────────
     # pole_boxes = detector.filter_by_class(results, "poste")
-    # mask = masker.generate_mask(pole_boxes, image.width, image.height)
+    # mask = mask.generate_mask(pole_boxes, image.width, image.height)
     # masker.save_mask(mask, image_path)
 
     # ── TODO: Paso 5 — Inpainting ─────────────────────────────────────────────
