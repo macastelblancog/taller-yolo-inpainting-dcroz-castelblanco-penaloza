@@ -182,9 +182,9 @@ Para evaluar el desempeño del modelo y calcular métricas como matrices de conf
 
 python src/core/trining/train.py
 
-Esto analiza las predicciones del modelo sobre el conjunto de validación y genera métricas de desempeño.
+Esto también analiza las predicciones del modelo sobre el conjunto de validación y genera métricas de desempeño.
 
-Los ejemplos del modelo se pueden ver en la carpeta examples. Donde se puede visualizar el resultado de las clasificaciones y la eliminación de los postes.
+Los ejemplos del modelo se pueden ver en la carpeta examples. Donde se puede visualizar el resultado de las clasificaciones y la eliminación de los postes, además del demo_pipeline.ipynb, donde estan compilados ejemplos adicionales.
  
 ### Uso del modelo
  
