@@ -42,9 +42,7 @@ taller-yolo-casas-dcroz-castelblanco-penaloza/
 
 ```
 ├── examples/ #Ejemplos de eliminación (poste)
-│   ├── figure_1.png
-│   ├──
-│   ├──
+│   
 │
 ├── images/ #Imagenes para entrenamiento
 │   ├── config
@@ -182,12 +180,11 @@ runs/train/house_poles_v1
  
 Para evaluar el desempeño del modelo y calcular métricas como matrices de confusión, curvas, etc, ejecutar:
 
-python src/core/pipeline.py
+python src/core/trining/train.py
 
 Esto analiza las predicciones del modelo sobre el conjunto de validación y genera métricas de desempeño.
 
-Si bien en la carpeta de las corridas del modelo tenemos ejemplos de las clasificaciones, y todas las métricas de evaluación y seguimiento de la entrenamiento epoca por epoca, se hace la clasificación de las imágenes según la matriz de confusión para tener la totalidad de ejemplo de FP y FN.
-
+Los ejemplos del modelo se pueden ver en la carpeta examples. Donde se puede visualizar el resultado de las clasificaciones y la eliminación de los postes.
  
 ### Uso del modelo
  
