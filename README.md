@@ -279,7 +279,7 @@ y se reutiliza en cada petición.
  
 ---
  
-## 📈 Métricas del experimento
+## Métricas del experimento
  
 Resultados registrados en `runs/train/house_poles_v1/`:
  
@@ -317,6 +317,8 @@ python -m src.core.pipeline "images/test/images/mi_foto.jpg"
 ---
 
 ## Resultados (métricas) y ejemplos de detección
+
+Los resultados de las métricas quedaron consignados en la carpeta runs\train\house_poles_v1.
 
 ## Limitaciones y pasos futuros recomendados
 
