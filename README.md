@@ -129,8 +129,7 @@ En las imágenes se hizo el etiquetado de las catergorías fachada y poste usand
 ### 1. Clonar el repositorio
  
 ```bash
-git clone https://github.com/macastelblancog/taller-yolo-inpainting-dcroz-castelblanco-penaloza
-cd taller-yolo-inpainting-dcroz-castelblanco-penaloza
+git clone https://github.com/<usuario>/taller-yolo-inpainting-dcroz-castelblanco-penaloza
 ```
  
 ### 2. Crear y activar entorno virtual
@@ -150,10 +149,6 @@ source .venv/bin/activate
 ```bash
 # Dependencias principales
 pip install -r requirements.txt
- 
-# Instalar el paquete en modo editable
-# (obligatorio para que funcionen los imports from src.core import ...)
-pip install -e .
  
 # (opcional) dependencias fijadas para mayor reproducibilidad
 pip install -r requirements_full.txt
@@ -180,7 +175,7 @@ runs/train/house_poles_v1
  
 Para evaluar el desempeño del modelo y calcular métricas como matrices de confusión, curvas, etc, ejecutar:
 
-python src/core/trining/train.py
+python src/core/training/train.py
 
 Esto también analiza las predicciones del modelo sobre el conjunto de validación y genera métricas de desempeño.
 
